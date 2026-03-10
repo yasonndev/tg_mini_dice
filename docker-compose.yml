@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  bot:
+    build: .
+    working_dir: /app
+    container_name: tg_minikek_bot
+    environment:
+      - TOKEN=${BOT_TOKEN}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SECRET_KEY=${SECRET_KEY}
+      - ADMIN_IDS=${ADMIN_IDS}
+      - WATCHFILES_FORCE_POLLING=true
+      - PYTHONUNBUFFERED=1 #от буфера принт
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - bot_network
+    extra_hosts:
+      - "laravel-local19.com:192.168.56.56"
+    restart: unless-stopped
+    volumes:
+      - ./app:/app/app # Горячая перезагрузка кода
+      - ./main.py:/app/main.py
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis; redis.Redis(host='redis').ping()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    env_file:
+      - .env
+
+  redis:
+    image: redis:7-alpine
+    container_name: tg_minikek_bot_redis
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bot_network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  bot_network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

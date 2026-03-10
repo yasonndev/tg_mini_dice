@@ -1,0 +1,5 @@
+watchfiles
+aiogram
+pydantic_settings
+httpx
+rich
